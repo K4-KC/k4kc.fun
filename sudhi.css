@@ -68,8 +68,43 @@
   .content {
     padding: 20px 0;
   }
+
+  .breaking-news-container {
+      width: 100%;
+      overflow: hidden;
+      padding: 5px;
+      background: #ff0000;
+      color: white;
+  }
+  
+  .breaking-news-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      scroll-behavior: smooth;
+      padding: 10px 0;
+  }
+  
+  .breaking-news-scroll::-webkit-scrollbar {
+      display: none;
+  }
+  
+  .breaking-news-card {
+      flex: 0 0 auto;
+      min-width: 200px;
+      padding: 5px;
+      background: white;
+      color: black;
+      border-radius: 5px;
+      font-weight: bold;
+  }
+  
+
   .news-headlines {
     flex: 3;
+    margin-top: 10px;
   }
   .news-headlines h1 {
     margin-bottom: 15px;
