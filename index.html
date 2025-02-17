@@ -2,89 +2,201 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>News kendra</title>
+  <title>K4KC.fun</title>
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <!-- Header -->
-  <header>
-    <div class="container header-container">
-      <h1>News kendra</h1>
-      <nav>
-        <ul>
-          <li><a href="#home">Home</a></li>
-          <li><a href="#about">About</a></li>
-          <li><a href="#services">Services</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </nav>
+  <!-- Score display above the canvas -->
+  <div id="scoreBoard">Score: 0 | High Score: 0</div>
+  
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  
+  <!-- Mobile controls below the canvas -->
+  <!-- The height of the container is 1.5x of the button size -->
+  <div class="control-btns">
+    <button id="leftBtn" class="control-btn-c">←</button>
+    <div class="horizontal-btns">
+      <button id="upBtn" class="control-btn">↑</button>
+      <button id="downBtn" class="control-btn">↓</button>
     </div>
-  </header>
+    <button id="rightBtn" class="control-btn-c">→</button>
+  </div>
 
-  <!-- Hero Section -->
-  <section class="hero" id="home">
-    <div class="container hero-container">
-      <h2>Empowering Your News Business</h2>
-      <p>Create your own newspaper with curated articles and customizable templates from News kendra.</p>
-      <a href="#services" class="btn">Learn More</a>
-    </div>
-  </section>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreBoard = document.getElementById('scoreBoard');
 
-  <!-- About Section -->
-  <section class="about" id="about">
-    <div class="container">
-      <h2>About News kendra</h2>
-      <p>
-        News kendra connects journalists with newspaper printing companies to revolutionize local news in Karnataka.
-        Our subscription-based model offers high-quality articles and customizable templates to meet your needs.
-      </p>
-    </div>
-  </section>
+    // Game settings
+    const cellSize = 20;                      // Each grid cell is 20x20 pixels
+    const canvasSize = canvas.width;          // Assuming a square canvas
+    const gridCount = canvasSize / cellSize;  // Number of cells per row/column
 
-  <!-- Services Section -->
-  <section class="services" id="services">
-    <div class="container">
-      <h2>Our Services</h2>
-      <div class="service">
-        <h3>Curated Articles</h3>
-        <p>Access a wide range of news articles written by our dedicated team of journalists.</p>
-      </div>
-      <div class="service">
-        <h3>Custom Templates</h3>
-        <p>Select and customize newspaper templates to match your brand and audience.</p>
-      </div>
-      <div class="service">
-        <h3>Easy Subscription</h3>
-        <p>Enjoy a seamless subscription process with regular updates and premium content from News kendra.</p>
-      </div>
-    </div>
-  </section>
+    // Game variables
+    let snake;
+    let food;
+    let start = false;
+    let dx;
+    let dy;
+    let inputSet = false;
+    let nextDirection;
+    let gameInterval;
+    let score;
+    let highScore = 0;  // Initialize high score
 
-  <!-- Contact Section -->
-  <section class="contact" id="contact">
-    <div class="container">
-      <h2>Contact News kendra</h2>
-      <form>
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name" required>
-        
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
-        
-        <label for="message">Message:</label>
-        <textarea id="message" name="message" rows="4" required></textarea>
-        
-        <button type="submit" class="btn">Submit</button>
-      </form>
-    </div>
-  </section>
+    // Helper function to set direction (prevents 180° reversal)
+    function setDirection(newDx, newDy) {
+      if ((newDx === 1 && dx === -1) ||
+          (newDx === -1 && dx === 1) ||
+          (newDy === 1 && dy === -1) ||
+          (newDy === -1 && dy === 1)) {
+        return;
+      }
+      if (inputSet) {
+        nextDirection = { dx: newDx, dy: newDy };
+      } else {
+        dx = newDx;
+        dy = newDy;
+        inputSet = true;
+      }
+    }
 
-  <!-- Footer -->
-  <footer>
-    <div class="container">
-      <p>&copy; 2025 News kendra. All Rights Reserved.</p>
-    </div>
-  </footer>
+    // Initialize or reset the game
+    function init() {
+      snake = [{ x: 10, y: 10 }];  // Starting position in grid coordinates
+      dx = 0;
+      dy = 0;
+      score = 0;
+      placeFood();
+      updateScoreBoard();
+      if (gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(update, 150); // Update every 150ms
+    }
+
+    // Place food at a random cell (avoiding snake cells)
+    function placeFood() {
+      food = {
+        x: Math.floor(Math.random() * gridCount),
+        y: Math.floor(Math.random() * gridCount)
+      };
+      // Re-place if food spawns on the snake
+      for (let segment of snake) {
+        if (segment.x === food.x && segment.y === food.y) {
+          return placeFood();
+        }
+      }
+    }
+
+    // Main game update loop
+    function update() {
+      // Calculate new head position
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      // Check collisions with walls or self
+      if (
+        head.x < 0 ||
+        head.x >= gridCount ||
+        head.y < 0 ||
+        head.y >= gridCount ||
+        snakeCollision(head) && start
+      ) {
+        gameOver();
+        return;
+      }
+
+      // Add the new head to the snake
+      snake.unshift(head);
+
+      // Check if food is eaten
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        placeFood();
+      } else {
+        snake.pop(); // Remove tail segment if not eating food
+      }
+
+      draw();
+      updateScoreBoard();
+      inputSet = false;
+      if (nextDirection) {
+        dx = nextDirection.dx;
+        dy = nextDirection.dy;
+        nextDirection = null;
+        inputSet = true;
+      }
+    }
+
+    // Check for collision with the snake itself
+    function snakeCollision(head) {
+      for (let segment of snake) {
+        if (head.x === segment.x && head.y === segment.y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Draw the game board, food, and snake on the canvas
+    function draw() {
+      // Clear the canvas
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw food
+      ctx.fillStyle = '#47df7a';
+      ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
+
+      // Draw snake
+      ctx.fillStyle = '#014a65';
+      for (let segment of snake) {
+        ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
+      }
+    }
+
+    // Update the score display above the canvas
+    function updateScoreBoard() {
+      scoreBoard.textContent = "Score: " + score + " | High Score: " + highScore;
+    }
+
+    // End the game and restart after alerting the score
+    function gameOver() {
+      clearInterval(gameInterval);
+      if (score > highScore) {
+        highScore = score;
+      }
+      alert('Game Over! Your score: ' + score + '. Press OK to restart.');
+      init();
+    }
+
+    // Listen for WASD key presses to change the snake's direction
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'w') {
+        setDirection(0, -1);
+      } else if (e.key === 's') {
+        setDirection(0, 1);
+      } else if (e.key === 'a') {
+        setDirection(-1, 0);
+      } else if (e.key === 'd') {
+        setDirection(1, 0);
+      }
+    });
+
+    // Add event listeners for mobile control buttons
+    document.getElementById('upBtn').addEventListener('click', function() {
+      setDirection(0, -1);
+    });
+    document.getElementById('downBtn').addEventListener('click', function() {
+      setDirection(0, 1);
+    });
+    document.getElementById('leftBtn').addEventListener('click', function() {
+      setDirection(-1, 0);
+    });
+    document.getElementById('rightBtn').addEventListener('click', function() {
+      setDirection(1, 0);
+    });
+
+    // Start the game
+    init();
+  </script>
 </body>
 </html>
